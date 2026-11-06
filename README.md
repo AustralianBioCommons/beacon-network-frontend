@@ -22,9 +22,12 @@ pnpm test
 pnpm build
 ```
 
-The current test site is https://bn.test.biocommons.org.au. Its release workflow
-uses the GitHub environment named `production`; that name currently refers to
-test hosting, not a production service. See [Deployment](docs/deployment.md).
+Deployment has two separate tasks:
+
+- [Set up AWS infrastructure](docs/aws-infrastructure-runbook.md) once per account.
+- [Publish a release](docs/deployment.md) to test, then promote it to production.
+
+Before enabling the new workflow, complete the [existing test environment transition](docs/test-environment-transition.md).
 
 ## Suggested Reading Path
 
@@ -33,8 +36,8 @@ test hosting, not a production service. See [Deployment](docs/deployment.md).
 3. [Development](docs/development.md)
 4. [Testing](docs/testing.md)
 5. [CI](docs/ci.md)
-6. [Deployment](docs/deployment.md)
-7. (Optional, AWS ops) [Frontend AWS Runbook](docs/aws-infrastructure-runbook.md)
+6. (one-time, AWS ops) [AWS Infrastructure Runbook](docs/aws-infrastructure-runbook.md)
+7. [Deployment](docs/deployment.md)
 8. [Architecture](docs/architecture.md)
 9. [Twelve-factor Alignment](docs/twelve-factor.md)
 

@@ -4,28 +4,67 @@ on:
   release:
     types:
       - published
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deployment environment
+        type: choice
+        options: [test, production]
+        default: test
+        required: true
+      release_tag:
+        description: Published release tag to deploy (or redeploy for rollback)
+        type: string
+        required: true
 
 permissions:
   id-token: write
   contents: read
 
-env:
-  AWS_REGION: ${{ vars.AWS_REGION }}
-  S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
-  CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.AWS_CLOUDFRONT_DISTRIBUTION_ID }}
-  VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
-  VITE_REQUEST_TIMEOUT_MS: ${{ vars.VITE_REQUEST_TIMEOUT_MS }}
-  VITE_RETRY_COUNT: ${{ vars.VITE_RETRY_COUNT }}
-  VITE_APP_TITLE: ${{ vars.VITE_APP_TITLE }}
-  VITE_ENABLE_DEBUG_LOGS: ${{ vars.VITE_ENABLE_DEBUG_LOGS }}
-
 jobs:
   deploy:
-    environment: production
+    environment: ${{ inputs.target || 'test' }}
+    concurrency:
+      group: frontend-deploy-${{ inputs.target || 'test' }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ap-southeast-2
+      S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
+      CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.AWS_CLOUDFRONT_DISTRIBUTION_ID }}
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      VITE_REQUEST_TIMEOUT_MS: ${{ vars.VITE_REQUEST_TIMEOUT_MS }}
+      VITE_RETRY_COUNT: ${{ vars.VITE_RETRY_COUNT }}
+      VITE_APP_TITLE: ${{ vars.VITE_APP_TITLE }}
+      VITE_ENABLE_DEBUG_LOGS: ${{ vars.VITE_ENABLE_DEBUG_LOGS }}
     steps:
+      - name: Verify release and destination
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.release_tag || github.event.release.tag_name }}
+          TARGET: ${{ inputs.target || 'test' }}
+          ROLE_ARN: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+        run: |
+          test -n "$RELEASE_TAG"
+          test -n "$S3_BUCKET"
+          test -n "$CLOUDFRONT_DISTRIBUTION_ID"
+          test -n "$ROLE_ARN"
+          case "$TARGET" in
+            test) expected_api=https://api.bn.test.biocommons.org.au/beacon-network/v2.0.0 ;;
+            production) expected_api=https://api.bn.biocommons.org.au/beacon-network/v2.0.0 ;;
+            *) exit 1 ;;
+          esac
+          if [ "$VITE_API_BASE_URL" != "$expected_api" ]; then
+            echo "VITE_API_BASE_URL must match the selected environment: $expected_api"
+            exit 1
+          fi
+          gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft == false' | grep -qx true
+
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ inputs.release_tag || github.event.release.tag_name }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -47,12 +86,6 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
-
-      - name: Verify deploy variables
-        run: |
-          test -n "$AWS_REGION"
-          test -n "$S3_BUCKET"
-          test -n "$CLOUDFRONT_DISTRIBUTION_ID"
 
       - name: Sync static assets to S3
         run: aws s3 sync dist/ "s3://${S3_BUCKET}" --delete

@@ -5,7 +5,9 @@
     "WebAcl": {
       "Type": "AWS::WAFv2::WebACL",
       "Properties": {
-        "Name": "BeaconNetworkFrontend-test",
+        "Name": {
+          "Fn::Sub": "BeaconNetworkFrontend-${Environment}"
+        },
         "Scope": "CLOUDFRONT",
         "DefaultAction": {
           "Allow": {}
@@ -69,7 +71,24 @@
         "VisibilityConfig": {
           "SampledRequestsEnabled": true,
           "CloudWatchMetricsEnabled": true,
-          "MetricName": "BeaconNetworkFrontendTest"
+          "MetricName": {
+            "Fn::FindInMap": [
+              "EnvironmentSettings",
+              {
+                "Ref": "Environment"
+              },
+              "MetricName"
+            ]
+          }
+        }
+      },
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "CloudFront request filtering; deployed separately in us-east-1",
+          "must": [
+            "Preserve the test WebACL name when updating the existing stack",
+            "Use the same Environment as the site stack"
+          ]
         }
       }
     }
@@ -81,6 +100,31 @@
           "WebAcl",
           "Arn"
         ]
+      }
+    }
+  },
+  "Metadata": {
+    "AWSToolsMetrics": {
+      "AWSAgentToolkit": "aws-cloudformation@3"
+    }
+  },
+  "Parameters": {
+    "Environment": {
+      "Type": "String",
+      "AllowedValues": [
+        "test",
+        "production"
+      ],
+      "Description": "Deployment target and GitHub environment; one frontend per AWS account"
+    }
+  },
+  "Mappings": {
+    "EnvironmentSettings": {
+      "test": {
+        "MetricName": "BeaconNetworkFrontendTest"
+      },
+      "production": {
+        "MetricName": "BeaconNetworkFrontendProduction"
       }
     }
   }
