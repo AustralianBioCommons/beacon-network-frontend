@@ -346,11 +346,11 @@ When adding UI fields:
 
 ---
 
-## Example endpoints (current)
+## Example endpoints (test environment)
 Aggregator:
-- `http://ec2-15-135-165-56.ap-southeast-2.compute.amazonaws.com:8080/beacon-network/v2.0.0/info`
-- `http://ec2-15-135-165-56.ap-southeast-2.compute.amazonaws.com:8080/beacon-network/v2.0.0/configuration`
-- `http://ec2-15-135-165-56.ap-southeast-2.compute.amazonaws.com:8080/beacon-network/v2.0.0/cohorts`
+- `https://api.bn.test.biocommons.org.au/beacon-network/v2.0.0/info`
+- `https://api.bn.test.biocommons.org.au/beacon-network/v2.0.0/configuration`
+- `https://api.bn.test.biocommons.org.au/beacon-network/v2.0.0/cohorts`
 
 Constituent examples:
 - `https://beacon.dsp.garvan.org.au/api/info`

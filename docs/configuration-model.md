@@ -109,6 +109,9 @@ If `/config.json` is missing, non-200, or cannot be parsed:
   - `VITE_*` values are fixed at build time.
   - Operators can change deployed `/config.json` to adjust runtime config without rebuilding.
   - The release workflow builds with GitHub environment `VITE_*` variables.
+  - Every release overwrites `/config.json` with the committed file (`{}` by
+    default). Manual runtime overrides do not survive the next release; keep
+    persistent deployment settings in the GitHub environment.
 
 ## Dev proxy variable
 

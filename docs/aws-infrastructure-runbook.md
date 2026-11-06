@@ -1,130 +1,67 @@
-# AWS Infrastructure Runbook
+# Frontend AWS Runbook
 
-AWS-specific deployment and operations guidance for serving the frontend over HTTPS and exposing an HTTPS API endpoint via ALB, while keeping WildFly on EC2 HTTP-only internally.
+Use this for infrastructure maintenance. Normal releases only upload files;
+see [Deployment](deployment.md).
 
-## Scope
+## Resource ownership
 
-This runbook covers:
+The live frontend runs in GUARDIANS Test account `181259112927`:
 
-- backend service on EC2 (`HTTP:8080`) with restricted security-group access
-- ALB + ACM certificate + Route53 public HTTPS endpoint
-- frontend configuration to call API over HTTPS
-- CloudFront/S3 cache behavior during frontend deploys
-- minimal CloudFormation template for repeatable setup
+- `infra/cloudformation/frontend-site.json` defines the private S3 bucket,
+  CloudFront distribution, origin access control, and GitHub publishing role.
+  The deployed stack is `BeaconNetworkFrontend-test` in `ap-southeast-2`.
+- `infra/cloudformation/frontend-edge.json` defines CloudFront's WAF in
+  `us-east-1`, with Amazon IP reputation, common, and known-bad-input rules.
+- The site stack uses an existing ACM certificate and GitHub OIDC provider.
+  Its publishing role can upload/delete this site's files and invalidate this
+  distribution; it cannot deploy infrastructure.
+- The bucket is retained if the site stack is removed.
 
-## API HTTPS requirement
+DNS is managed externally in the generic Test account `232870232581`.
+The A and AAAA records for `bn.test.biocommons.org.au` point to
+`dewh1xhhi1hq7.cloudfront.net`, the active distribution in GUARDIANS Test.
 
-- Browsers block mixed content.
-- If frontend is loaded from `https://...`, calls to `http://...` are blocked client-side.
-- Therefore the frontend must call the API over HTTPS.
+## Finding the HTTPS certificate
 
-Reference traffic flow:
+In account `181259112927`, select **N. Virginia (`us-east-1`)** in ACM to find
+`bn.test.biocommons.org.au`. CloudFront uses certificate
+`a23ac3c9-c8d9-4312-9572-9c8125543ce4`.
 
-- Browser -> Frontend static site: `HTTPS`
-- Browser -> API endpoint (ALB/Route53): `HTTPS`
-- ALB -> WildFly on EC2: `HTTP:8080` (internal VPC hop)
+AWS requires CloudFront's certificate and WAF configuration in `us-east-1`,
+even though the assets bucket is in Sydney. The backend's ALB certificate is
+regional and may appear in Sydney instead. CloudFront serves the website globally.
 
-## 1. Backend EC2 (WildFly) and security groups (HTTP internal only)
+The certificate ARN was supplied as the site's CloudFormation `CertificateArn`
+parameter. Ordinary frontend releases do not need to supply it again.
 
-- Instance can remain in existing VPC (including default VPC).
-- WildFly backend service listens on `HTTP:8080` and serves:
-  - `/beacon-network/v2.0.0/info`
-  - `/beacon-network/v2.0.0/configuration`
-  - `/beacon-network/v2.0.0/cohorts`
-- Restrict EC2 inbound rule:
-  - allow `TCP 8080` from ALB security group only
-  - remove `0.0.0.0/0` access to port `8080`
+## Infrastructure changes or a new installation
 
-## 2. ALB + ACM cert + Route53
+Review a CloudFormation change set before updating an existing stack. Preserve
+its current parameter values unless deliberately changing them.
 
-1. Request ACM cert in same region as EC2/ALB (for example `ap-southeast-2`):
-   - domain example: `api.example.org`
-   - complete DNS validation until status is `Issued`
-2. Create internet-facing ALB in same VPC as EC2:
-   - enable at least two AZs/subnets
-   - ensure AZ containing EC2 target is enabled
-3. Create target group:
-   - target type: `instance`
-   - protocol/port: `HTTP:8080`
-   - health check path: `/beacon-network/v2.0.0/info`
-   - this is ALB -> EC2 internal HTTP traffic
-4. Register EC2 target and verify `Healthy`.
-5. Add ALB listeners:
-   - `HTTPS :443` -> forward to target group
-   - `HTTP :80` -> redirect to `HTTPS :443` (or omit 80 listener)
-6. Create Route53 record:
-   - `api.example.org` -> Alias to ALB DNS
-7. Validate:
+For a new installation:
 
-```bash
-curl -i https://api.example.org/beacon-network/v2.0.0/info
-```
+1. Obtain a validated frontend ACM certificate in `us-east-1`. The DNS
+   administrator adds its validation CNAME and retains it for renewal.
+2. Ensure the account has the GitHub OIDC provider.
+3. Deploy the edge template in `us-east-1`.
+4. Deploy the site template in `ap-southeast-2`, supplying `CertificateArn`,
+   the edge stack's `WebAclArn`, `FrontendHostname`, and `AttachHostname=true`.
+5. Configure publishing from the site's outputs, then upload the frontend.
+6. Ask the DNS administrator to point A/AAAA aliases at `DistributionDomainName`.
 
-## 3. Frontend config to API HTTPS endpoint
+These templates describe the existing test setup, not a general multi-environment
+framework: the WAF name and GitHub environment trust are fixed to their current
+values. Review them before reusing them for another environment.
 
-Use an HTTPS API base URL in production:
+`AttachHostname=false` is available for staging a distribution during a hostname
+migration. The existing live site already uses `AttachHostname=true`; normal
+updates do not require toggling it.
 
-- build-time: `VITE_API_BASE_URL`
-- runtime override: `/config.json` `apiBaseUrl`
+## Backend interface
 
-Example runtime `public/config.json`:
-
-```json
-{
-  "apiBaseUrl": "https://api.example.org/beacon-network/v2.0.0"
-}
-```
-
-If frontend and API are different origins, configure backend CORS for:
-
-- origin: frontend URL (for example `https://app.example.org`)
-- methods: `GET, OPTIONS`
-- required headers (at least `Content-Type`)
-
-## 4. CloudFront + S3 cache correctness for frontend deploys
-
-When deploying a new `dist/`, stale `index.html` can reference old hashed assets.
-
-- upload assets first, then `index.html`
-- set long cache on hashed assets (`/assets/*`)
-- set no-cache (or very short cache) for `index.html`
-- invalidate CloudFront `"/index.html"` on each deploy (or `"/*"` when needed)
-
-S3 sync example:
-
-```bash
-aws s3 sync dist/ s3://<bucket>/ --delete
-```
-
-## 5. Infrastructure as code option
-
-Minimal CloudFormation template for ALB side:
-
-- `infra/cloudformation/alb-https-api.yml`
-
-Template creates:
-
-- ALB security group
-- internet-facing ALB
-- target group (`HTTP:8080`)
-- `80 -> 443` redirect listener
-- `443` listener with ACM cert
-- optional Route53 alias record
-- optional EC2 security-group rule allowing `8080` from ALB SG
-
-Example deploy command:
-
-```bash
-aws cloudformation deploy \
-  --stack-name beacon-network-api-alb \
-  --template-file infra/cloudformation/alb-https-api.yml \
-  --parameter-overrides \
-    VpcId=vpc-xxxxxxxx \
-    PublicSubnet1Id=subnet-aaaaaaaa \
-    PublicSubnet2Id=subnet-bbbbbbbb \
-    BackendInstanceId=i-0123456789abcdef0 \
-    CertificateArn=arn:aws:acm:ap-southeast-2:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx \
-    ApiDomainName=api.example.org \
-    HostedZoneId=Z1234567890ABC \
-    BackendSecurityGroupId=sg-0123abcd4567efgh8
-```
+The frontend requires an HTTPS API base URL, browser CORS access, and the response
+shapes documented in [API contracts](../src/api/contracts.md). It calls `/info`,
+`/configuration`, and `/cohorts`. It has no dependency on the backend's application
+server, compute service, or internal network configuration. Backend deployment
+instructions belong in `beacon-network-aws-cdk`.
