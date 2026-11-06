@@ -1,8 +1,30 @@
 # Correct the existing test GitHub environment
 
-The existing test site uses a GitHub environment named `production`. Correct
-that once before enabling the updated release workflow or publishing a new release.
-No AWS resources need to be replaced.
+The test site previously used a GitHub environment named `production`. It now
+publishes through `test`, using the same AWS resources.
+
+## Current status
+
+- **Steps 1–4 are complete.** The site stack update reached `UPDATE_COMPLETE`,
+  and a release was successfully deployed through the `test` GitHub environment.
+  A change to `VITE_APP_TITLE` confirmed that the build used the test settings.
+- **Production certificate validation is pending.** The certificate has been
+  requested and its validation CNAME details obtained. Wait for DNS validation
+  to complete and ACM to report `ISSUED`.
+- **Step 5 remains to be completed.** Production infrastructure has not yet been
+  deployed, so its publishing role, bucket, and distribution outputs are not yet
+  available. Do not run a production release with old test bindings.
+
+Once the certificate is issued, continue with **step 3, Deploy the WAF, then the
+site**, in the [AWS Infrastructure Runbook](aws-infrastructure-runbook.md#3-deploy-the-waf-then-the-site).
+Use the resulting site outputs to finish step 5 below, clearing any remaining
+test bindings. Publish the production frontend before asking the DNS administrator
+to add its A/AAAA routing aliases to the CloudFront hostname. The certificate's
+validation CNAME does not route frontend traffic.
+
+## Transition checklist
+
+Steps 1–4 are retained here for reference; they do not need to be repeated.
 
 1. Pause releases and let any active deployment finish.
 2. Create GitHub environment `test`. Copy the old `production` variables and
