@@ -50,7 +50,7 @@ If the repo doesn’t yet have these, create them.
 ## External APIs
 ### Aggregator (primary)
 Base URL:
-- `http://ec2-15-135-165-56.ap-southeast-2.compute.amazonaws.com:8080/beacon-network/v2.0.0`
+- `https://api.bn.test.biocommons.org.au/beacon-network/v2.0.0`
 
 Endpoints used initially:
 - `/info`
@@ -121,7 +121,7 @@ When acting as an agent:
 
 ## Configuration & environment variables
 Agents should implement configuration via environment variables (document in README):
-- `VITE_API_BASE_URL` (or framework equivalent): defaults to the aggregator base URL above for local dev.
+- `VITE_API_BASE_URL` (or framework equivalent): set to the aggregator base URL above when using the test service; the committed local default is `https://localhost/beacon-network/v2.0.0`.
 - Optional: `VITE_REQUEST_TIMEOUT_MS`, `VITE_RETRY_COUNT` (sane defaults).
 
 ## Security & privacy

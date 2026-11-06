@@ -3,99 +3,62 @@
 Previous: [CI](ci.md)  
 Next: [Architecture](architecture.md)
 
-## Target model
+## Current deployment
 
-Deploy as static assets (no server runtime required), for example:
-- S3 + CloudFront
-- nginx
-- equivalent static hosting
+The frontend is static files in a private S3 bucket, served by CloudFront.
+It consumes the backend's HTTPS endpoints; backend deployment is managed in the
+separate `beacon-network-aws-cdk` repository.
 
-## Release steps
+| Setting | Current test deployment |
+| --- | --- |
+| Website | `https://bn.test.biocommons.org.au` |
+| API base URL | `https://api.bn.test.biocommons.org.au/beacon-network/v2.0.0` |
+| Hosting account | GUARDIANS Test, `181259112927` |
+| S3 bucket | `beacon-network-frontend-181259112927`, Sydney (`ap-southeast-2`) |
+| CloudFront distribution | `E15BGN8G408YZ0` (`dewh1xhhi1hq7.cloudfront.net`) |
+| DNS zone | `test.biocommons.org.au`, generic Test account `232870232581` |
+| GitHub environment | `production` — despite its name, this deploys the test site |
 
-- Build with `pnpm build`
-- Serve `dist/`
-- Provide runtime `/config.json` per environment when needed
+There is currently one release destination. This baseline does not implement
+separate test and production deployment targets or a CDK frontend deployment.
 
-## Runtime config note
+## Publish a release
 
-Environment-specific API URLs and knobs can be set via deployed `config.json` without rebuilding assets.
+Publish a GitHub Release to trigger `.github/workflows/release-deploy-aws.yml`.
+The workflow builds the frontend, assumes its AWS role through GitHub OIDC,
+uploads `dist/` to the existing S3 bucket, and invalidates CloudFront.
+It does not create or update AWS infrastructure.
 
-Repository convention:
+After deployment, check the Overview, Configuration, and Cohorts pages at the
+test URL. A release can be redeployed by rerunning its workflow.
 
-- `public/config.json` is intentionally committed as `{}` (neutral default).
-- `public/config.json.example` documents the expected runtime JSON shape.
+## GitHub configuration
 
-## Release deploy workflow configuration
+The GitHub environment `production` supplies these variables:
 
-The release deployment workflow is:
+| Variable | Value |
+| --- | --- |
+| `AWS_REGION` | `ap-southeast-2` |
+| `AWS_S3_BUCKET` | `beacon-network-frontend-181259112927` |
+| `AWS_CLOUDFRONT_DISTRIBUTION_ID` | `E15BGN8G408YZ0` |
+| `VITE_API_BASE_URL` | The API base URL above |
 
-- `.github/workflows/release-deploy-aws.yml`
+Set the secret `AWS_ROLE_TO_ASSUME` to
+`arn:aws:iam::181259112927:role/gh-deploy-beacon-frontend-to-s3`.
+Optional variables are `VITE_REQUEST_TIMEOUT_MS`, `VITE_RETRY_COUNT`,
+`VITE_APP_TITLE`, and `VITE_ENABLE_DEBUG_LOGS`.
 
-It deploys on GitHub Release `published` and expects these GitHub Actions settings.
+The role's trust policy names the GitHub environment `production`. Renaming that
+environment requires a coordinated trust-policy change; changing the label alone
+will break publishing.
 
-### Variables
+## Runtime configuration
 
-- `AWS_REGION`
-- `AWS_S3_BUCKET`
-- `AWS_CLOUDFRONT_DISTRIBUTION_ID`
-- `VITE_API_BASE_URL`
-- `VITE_REQUEST_TIMEOUT_MS`
-- `VITE_RETRY_COUNT`
-- `VITE_APP_TITLE`
-- `VITE_ENABLE_DEBUG_LOGS`
+The workflow builds with the environment's `VITE_*` values. `/config.json` can
+override them at runtime, but each release overwrites that file with the committed
+`public/config.json` (`{}` by default). Keep persistent settings in GitHub.
+See [Configuration Model](configuration-model.md) for details.
 
-### Secrets
-
-- `AWS_ROLE_TO_ASSUME`
-  - IAM role ARN used by GitHub OIDC (`aws-actions/configure-aws-credentials`).
-
-Build-time note:
-
-- Release deploy uses `VITE_*` GitHub environment variables at build time.
-- Runtime `/config.json` remains available for post-deploy overrides (for example uploading a non-empty `config.json` to S3).
-
-## AWS operator runbook
-
-For AWS-specific backend/API edge setup (EC2 + ALB + ACM + Route53), see:
-
-- [AWS Infrastructure Runbook](aws-infrastructure-runbook.md)
-
-## GUARDIANS test-account hosting
-
-The `bn.test.biocommons.org.au` frontend is hosted in AWS account
-`181259112927`. The GitHub environment remains named `production` because the
-release workflow uses that environment; it is independent of the AWS account's
-Test designation. The backend URL remains
-`https://api.bn.test.biocommons.org.au/beacon-network/v2.0.0`.
-
-Infrastructure templates:
-
-- `infra/cloudformation/frontend-edge.json`: CloudFront WAF in `us-east-1`,
-  preserving the Amazon IP reputation, common, and known-bad-input rule groups.
-- `infra/cloudformation/frontend-site.json`: private encrypted S3 bucket,
-  CloudFront origin access control, HTTPS distribution, and GitHub release role
-  in the `BeaconNetworkFrontend-test` stack in `ap-southeast-2`.
-
-Request the frontend ACM certificate in `us-east-1` and validate it through DNS.
-Deploy the edge stack first, then pass its `WebAclArn` output and the certificate
-ARN to the site stack. The site stack expects the GitHub OIDC provider to exist
-in the account. Its release role trusts only this repository's `production`
-environment and can publish only to this site's bucket and invalidate this
-site's distribution.
-
-For an initial deployment while the hostname belongs to another distribution,
-use `AttachHostname=false`, upload the current release to the `BucketName`
-output, and verify the `DistributionDomainName` endpoint. Transfer the hostname
-using the CloudFront domain-migration procedure, then update the stack with
-`AttachHostname=true` so CloudFormation owns the final alias configuration.
-Point both the A and AAAA Route 53 aliases at the new distribution.
-
-Set the GitHub `production` environment's `AWS_S3_BUCKET` and
-`AWS_CLOUDFRONT_DISTRIBUTION_ID` from the stack outputs and
-`AWS_ROLE_TO_ASSUME` secret to `ReleaseRoleArn`. Keep `AWS_REGION` as
-`ap-southeast-2`. Rerunning an existing release deployment verifies OIDC and
-publishes the same release without creating another release.
-
-The assets bucket has a retain policy to prevent accidental deletion of release
-files during stack removal. DNS is managed separately in the
-`test.biocommons.org.au` hosted zone in account `232870232581`.
+For other static hosting, run `pnpm build` and serve `dist/`.
+For the existing AWS resources and infrastructure templates, see the
+[Frontend AWS Runbook](aws-infrastructure-runbook.md).
