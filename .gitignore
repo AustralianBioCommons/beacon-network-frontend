@@ -11,3 +11,8 @@ vite.config.d.ts
 vitest.config.js
 vitest.config.d.ts
 pnpm-debug.log*
+
+# Local operator notes and editor recovery files
+docs/local/
+*.swp
+*.swo

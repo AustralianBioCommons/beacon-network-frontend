@@ -3,14 +3,15 @@
   "Description": "Beacon frontend private S3, CloudFront and GitHub release deployment identity",
   "Parameters": {
     "CertificateArn": {
-      "Type": "String"
+      "Type": "String",
+      "Description": "Existing validated frontend ACM certificate in this account, in us-east-1"
     },
     "WebAclArn": {
-      "Type": "String"
+      "Type": "String",
+      "Description": "WebAclArn output of the edge stack in this account, in us-east-1"
     },
     "FrontendHostname": {
-      "Type": "String",
-      "Default": "bn.test.biocommons.org.au"
+      "Type": "String"
     },
     "AttachHostname": {
       "Type": "String",
@@ -19,6 +20,14 @@
         "true",
         "false"
       ]
+    },
+    "Environment": {
+      "Type": "String",
+      "AllowedValues": [
+        "test",
+        "production"
+      ],
+      "Description": "Deployment target and GitHub environment; one frontend per AWS account"
     }
   },
   "Conditions": {
@@ -190,7 +199,9 @@
               "Condition": {
                 "StringEquals": {
                   "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-                  "token.actions.githubusercontent.com:sub": "repo:GUARDIANS-infrastructure/beacon-network-frontend:environment:production"
+                  "token.actions.githubusercontent.com:sub": {
+                    "Fn::Sub": "repo:GUARDIANS-infrastructure/beacon-network-frontend:environment:${Environment}"
+                  }
                 }
               }
             }
@@ -240,6 +251,16 @@
             }
           }
         ]
+      },
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Publish application files without granting infrastructure deployment permissions",
+          "must": [
+            "Trust only the matching GitHub environment",
+            "Preserve the role name so the existing test role is updated in place",
+            "Test and production use separate AWS accounts"
+          ]
+        }
       }
     }
   },
@@ -269,6 +290,11 @@
           "Arn"
         ]
       }
+    }
+  },
+  "Metadata": {
+    "AWSToolsMetrics": {
+      "AWSAgentToolkit": "aws-cloudformation@3"
     }
   }
 }

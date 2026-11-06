@@ -21,3 +21,6 @@ Steps:
 ## Purpose
 
 CI is the release gate for code health and build validity.
+
+Unit tests include the CloudFormation deployment-target and publishing-role contracts.
+Infrastructure setup is operator-run; the release workflow only publishes app files.
