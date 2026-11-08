@@ -89,17 +89,29 @@ aws cloudformation describe-stacks \
 
 For an existing stack, use its actual name and preserve its parameter values.
 Add `--no-execute-changeset` to `deploy` to review changes before executing them
-in CloudFormation. The bucket and role names remain stable for existing test
-hosting; do not create a second site stack in the same account. The bucket is
-retained if its stack is removed.
+in CloudFormation. The bucket is retained if its stack is removed.
 
-## 4. Connect publishing and DNS
+## 4. Configure GH publishing and DNS
 
-Use the site outputs to configure the matching [GitHub environment](deployment.md#environment-configuration).
+Use the site outputs — for example, see output of:
+```bash
+aws cloudformation describe-stacks \
+  --region ap-southeast-2 \
+  --stack-name "BeaconNetworkFrontend-production" \
+  --query 'Stacks[0].Outputs' \
+  --output table
+```
+— to configure the matching [GitHub environment](deployment.md#environment-configuration).
 Its role can publish only to this bucket and invalidate this distribution;
 it has no CloudFormation or DNS permissions.
 
-Publish a release, then send the DNS administrator:
+Publish a GitHub Release to deploy automatically to **test**, then verify it.
+For **production**, manually run **Release Deploy (AWS)** from `main`, select
+`production`, and enter that same published release tag. If a published release
+has already been verified in test, proceed directly to the production workflow.
+See [Publish a release](deployment.md) for details.
+
+After deployment succeeds, send the DNS administrator:
 
 - The frontend hostname for the selected environment.
 - The site's `DistributionDomainName` output (the CloudFront hostname).
