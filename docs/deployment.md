@@ -51,6 +51,5 @@ release replaces that file. Keep persistent settings in GitHub.
 [Set up the infrastructure](aws-infrastructure-runbook.md) once per account;
 repeat only when infrastructure changes. DNS and backend deployment are separate.
 
-Before enabling this workflow, complete the [existing test environment transition](test-environment-transition.md).
-The old GitHub environment named `production` currently publishes to test;
-it must be corrected before it can hold real production settings.
+Test and production setup is complete. Use the release workflow above for routine
+updates to either live site.

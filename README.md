@@ -27,7 +27,10 @@ Deployment has two separate tasks:
 - [Set up AWS infrastructure](docs/aws-infrastructure-runbook.md) once per account.
 - [Publish a release](docs/deployment.md) to test, then promote it to production.
 
-Before enabling the new workflow, complete the [existing test environment transition](docs/test-environment-transition.md).
+Environments are currently deployed:
+
+- [Test](https://bn.test.biocommons.org.au)
+- [Production](https://bn.biocommons.org.au)
 
 ## Suggested Reading Path
 

@@ -130,16 +130,21 @@ HTTPS and API calls at the final hostname.
 before a hostname migration. A normal new deployment uses `true` and needs no
 second infrastructure deployment when DNS is added.
 
-## Existing test installation
+## Maintaining existing infrastructure
 
-The test site's hosting account and DNS account are separate. Find its existing
-site stack in Sydney and read its outputs for the bucket, distribution, and
+Find the selected environment's existing site stack in Sydney and read its outputs
+for the bucket, distribution, and
 publishing role. Find the frontend certificate in ACM in N. Virginia. Use those
 live values rather than copying resource identifiers from documentation.
 
-Keep these resources. Follow the [one-time GitHub environment transition](test-environment-transition.md)
-before switching to the new workflow. No bucket, distribution, or DNS migration
-is required. Backend implementation details belong in `beacon-network-aws-cdk`;
+The test site's hosting account and DNS account are separate. Preserve existing
+stack names and parameter values when updating infrastructure. Before the next
+test WAF template update, check its deployed parameters and supply
+`Environment=test` when applying the current template. The current template
+preserves the test WAF name and metric name; a successful frontend release does
+not verify whether the WAF template has been updated.
+
+Backend implementation details belong in `beacon-network-aws-cdk`;
 the frontend only relies on the [API contract](../src/api/contracts.md).
 
 ## Local deployment details
