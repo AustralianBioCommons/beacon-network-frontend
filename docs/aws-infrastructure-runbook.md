@@ -17,6 +17,13 @@ You need:
 
 The templates create everything else: a private encrypted S3 bucket in
 **Sydney (`ap-southeast-2`)**, CloudFront distribution, WAF, and publishing role.
+The publishing role trusts only the `AustralianBioCommons/beacon-network-frontend`
+repository (owner ID `61487688`, repository ID `1168215484`) and the GitHub
+environment matching the stack's `Environment` parameter. GitHub uses this
+immutable OIDC subject format for repositories transferred after July 15, 2026.
+If the repository moves again, update the trust condition in
+`infra/cloudformation/frontend-site.json` and redeploy **both** site stacks;
+rerunning a release workflow alone will not update the roles.
 AWS requires CloudFront's certificate and WAF configuration in `us-east-1`,
 even though the bucket is in Sydney. Select N. Virginia in ACM to find the frontend
 certificate; the backend's regional certificate may instead appear in Sydney.

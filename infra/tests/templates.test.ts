@@ -28,7 +28,7 @@ describe("frontend infrastructure", () => {
     const conditions = trust[0].Condition.StringEquals;
     expect(conditions["token.actions.githubusercontent.com:aud"]).toBe("sts.amazonaws.com");
     expect(conditions["token.actions.githubusercontent.com:sub"]["Fn::Sub"].replace("${Environment}", target)).toBe(
-      `repo:GUARDIANS-infrastructure/beacon-network-frontend:environment:${target}`
+      `repo:AustralianBioCommons@61487688/beacon-network-frontend@1168215484:environment:${target}`
     );
   });
 

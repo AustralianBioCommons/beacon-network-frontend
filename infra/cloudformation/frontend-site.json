@@ -200,7 +200,7 @@
                 "StringEquals": {
                   "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
                   "token.actions.githubusercontent.com:sub": {
-                    "Fn::Sub": "repo:GUARDIANS-infrastructure/beacon-network-frontend:environment:${Environment}"
+                    "Fn::Sub": "repo:AustralianBioCommons@61487688/beacon-network-frontend@1168215484:environment:${Environment}"
                   }
                 }
               }
@@ -256,7 +256,7 @@
         "com.aws.cloudformation.Context": {
           "why": "Publish application files without granting infrastructure deployment permissions",
           "must": [
-            "Trust only the matching GitHub environment",
+            "Trust only the matching GitHub environment in repository 1168215484 under owner 61487688",
             "Preserve the role name so the existing test role is updated in place",
             "Test and production use separate AWS accounts"
           ]
