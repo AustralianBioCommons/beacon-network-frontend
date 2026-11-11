@@ -40,33 +40,31 @@ export function PartnerLogoWall() {
   }
 
   return (
-    <footer>
-      <section aria-label="Partner logos" className="logoWall">
-        <ul className="logoGrid">
-          {logos.map((logo) => {
-            const img = (
-              <img
-                src={logo.src}
-                alt={logo.alt}
-                loading="lazy"
-                decoding="async"
-              />
-            );
+    <section aria-label="Partner logos" className="logoWall">
+      <ul className="logoGrid">
+        {logos.map((logo) => {
+          const img = (
+            <img
+              src={logo.src}
+              alt={logo.alt}
+              loading="lazy"
+              decoding="async"
+            />
+          );
 
-            return (
-              <li key={logo.src} className="logoTile">
-                {logo.href ? (
-                  <a href={logo.href} target="_blank" rel="noreferrer">
-                    {img}
-                  </a>
-                ) : (
-                  img
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-    </footer>
+          return (
+            <li key={logo.src} className="logoTile">
+              {logo.href ? (
+                <a href={logo.href} target="_blank" rel="noreferrer">
+                  {img}
+                </a>
+              ) : (
+                img
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }

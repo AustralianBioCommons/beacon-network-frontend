@@ -2,7 +2,7 @@ const defaultConfig = {
   apiBaseUrl: "https://localhost/beacon-network/v2.0.0",
   requestTimeoutMs: 10000,
   retryCount: 1,
-  appTitle: "Beacon Network",
+  appTitle: "Explore human omics research data",
   enableDebugLogs: false
 } as const;
 
