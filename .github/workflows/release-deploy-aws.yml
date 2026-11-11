@@ -35,7 +35,7 @@ jobs:
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
       VITE_REQUEST_TIMEOUT_MS: ${{ vars.VITE_REQUEST_TIMEOUT_MS }}
       VITE_RETRY_COUNT: ${{ vars.VITE_RETRY_COUNT }}
-      VITE_APP_TITLE: ${{ vars.VITE_APP_TITLE }}
+      VITE_APP_TITLE: ${{ (inputs.target || 'test') == 'production' && 'Explore human omics research data' || 'GUARDIANS Beacon Network — TEST' }}
       VITE_ENABLE_DEBUG_LOGS: ${{ vars.VITE_ENABLE_DEBUG_LOGS }}
     steps:
       - name: Verify release and destination

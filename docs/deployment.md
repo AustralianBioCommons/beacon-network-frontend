@@ -20,6 +20,12 @@ The workflow checks out the selected tag, builds with that environment's setting
 uploads `dist/` to S3, and invalidates CloudFront. It cannot deploy infrastructure.
 Normal releases need **no CloudFormation commands, certificate ARN, or DNS changes**.
 
+The browser tab title is `Beacon Network` in both environments. The workflow sets
+the page heading to `GUARDIANS Beacon Network — TEST` for test and
+`Explore human omics research data` for production. These headings are set at
+build time; publishing a new release or redeploying an updated release is needed
+to change a live site.
+
 ## Environment configuration
 
 Set these in each GitHub environment (`test` and `production`):
@@ -41,6 +47,8 @@ not match the selected target. Optional `VITE_*` settings are described in
 [Configuration](configuration-model.md). Use environment-scoped variables so the
 two destinations cannot overwrite each other's settings. Production environment
 protection rules can restrict who deploys and which workflow refs are allowed.
+The release workflow sets `VITE_APP_TITLE` itself; a GitHub environment variable
+with that name has no effect on release deployments.
 
 Each target rebuilds the selected source release; this is not promotion of an
 identical built artifact. `/config.json` supports runtime overrides, but every
